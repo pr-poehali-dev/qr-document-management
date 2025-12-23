@@ -28,11 +28,28 @@ interface Document {
   qrCode: string;
 }
 
+type UserRole = 'cashier' | 'admin' | 'creator' | 'customer';
+
+interface Settings {
+  storeName: string;
+  depositFee: number;
+  pickupFee: number;
+}
+
 const Index = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [cashierName, setCashierName] = useState('');
   const [password, setPassword] = useState('');
   const [currentCashier, setCurrentCashier] = useState('');
+  const [userRole, setUserRole] = useState<UserRole>('cashier');
+  
+  const [settings, setSettings] = useState<Settings>({
+    storeName: 'DocuStore',
+    depositFee: 0,
+    pickupFee: 0,
+  });
+
+  const [editingDoc, setEditingDoc] = useState<Document | null>(null);
 
   const [documents, setDocuments] = useState<Document[]>([]);
   const [activeTab, setActiveTab] = useState('issue');
@@ -51,16 +68,40 @@ const Index = () => {
 
   const handleLogin = () => {
     if (!cashierName.trim()) {
-      toast.error('Введите имя кассира');
+      toast.error('Введите имя или номер телефона');
       return;
     }
-    if (password !== '2025') {
-      toast.error('Неверный пароль');
-      return;
+    
+    if (password === '202505') {
+      setUserRole('creator');
+      setCurrentCashier(cashierName);
+      setIsLoggedIn(true);
+      toast.success(`Создатель ${cashierName} вошёл в систему`);
+    } else if (password === '2025') {
+      setUserRole('admin');
+      setCurrentCashier(cashierName);
+      setIsLoggedIn(true);
+      toast.success(`Администратор ${cashierName} вошёл в систему`);
+    } else if (password === '25') {
+      setUserRole('cashier');
+      setCurrentCashier(cashierName);
+      setIsLoggedIn(true);
+      toast.success(`Кассир ${cashierName} вошёл в систему`);
+    } else {
+      const customerDocs = documents.filter(
+        (d) => d.recipientPhone === cashierName || 
+        (d.customerName.toLowerCase() + ' ' + d.customerLastName.toLowerCase()).includes(cashierName.toLowerCase())
+      );
+      
+      if (customerDocs.length > 0) {
+        setUserRole('customer');
+        setCurrentCashier(cashierName);
+        setIsLoggedIn(true);
+        toast.success(`Добро пожаловать, клиент!`);
+      } else {
+        toast.error('Неверный пароль или данные не найдены');
+      }
     }
-    setCurrentCashier(cashierName);
-    setIsLoggedIn(true);
-    toast.success(`Добро пожаловать, ${cashierName}!`);
   };
 
   const generateQRCode = async (text: string): Promise<string> => {
@@ -112,25 +153,47 @@ const Index = () => {
     const docNumber = newDocNumber.trim() || `DOC-${Date.now()}`;
     const qrCode = await generateQRCode(docNumber);
 
-    const newDoc: Document = {
-      id: `${Date.now()}`,
-      number: docNumber,
-      customerName: customerName.trim(),
-      customerLastName: customerLastName.trim(),
-      itemDescription: itemDescription.trim(),
-      pickupDate: pickupDate,
-      recipientPhone: recipientPhone.trim(),
-      recipientEmail: recipientEmail.trim(),
-      depositAmount: parseFloat(depositAmount),
-      pickupAmount: parseFloat(pickupAmount),
-      issuedBy: currentCashier,
-      issuedAt: new Date(),
-      status: 'issued',
-      qrCode,
-    };
-
-    setDocuments([newDoc, ...documents]);
-    toast.success(`Документ ${docNumber} выдан клиенту ${customerName} ${customerLastName}`);
+    if (editingDoc) {
+      const updatedDocs = documents.map((d) =>
+        d.id === editingDoc.id
+          ? {
+              ...d,
+              number: docNumber,
+              customerName: customerName.trim(),
+              customerLastName: customerLastName.trim(),
+              itemDescription: itemDescription.trim(),
+              pickupDate: pickupDate,
+              recipientPhone: recipientPhone.trim(),
+              recipientEmail: recipientEmail.trim(),
+              depositAmount: parseFloat(depositAmount),
+              pickupAmount: parseFloat(pickupAmount),
+              qrCode,
+            }
+          : d
+      );
+      setDocuments(updatedDocs);
+      toast.success(`Документ ${docNumber} обновлён`);
+      setEditingDoc(null);
+    } else {
+      const newDoc: Document = {
+        id: `${Date.now()}`,
+        number: docNumber,
+        customerName: customerName.trim(),
+        customerLastName: customerLastName.trim(),
+        itemDescription: itemDescription.trim(),
+        pickupDate: pickupDate,
+        recipientPhone: recipientPhone.trim(),
+        recipientEmail: recipientEmail.trim(),
+        depositAmount: parseFloat(depositAmount),
+        pickupAmount: parseFloat(pickupAmount),
+        issuedBy: currentCashier,
+        issuedAt: new Date(),
+        status: 'issued',
+        qrCode,
+      };
+      setDocuments([newDoc, ...documents]);
+      toast.success(`Документ ${docNumber} выдан клиенту ${customerName} ${customerLastName}`);
+    }
 
     setNewDocNumber('');
     setCustomerName('');
@@ -141,6 +204,33 @@ const Index = () => {
     setRecipientEmail('');
     setDepositAmount('');
     setPickupAmount('');
+  };
+
+  const handleDeleteDocument = (docId: string) => {
+    if (userRole !== 'admin' && userRole !== 'creator') {
+      toast.error('Недостаточно прав для удаления');
+      return;
+    }
+    setDocuments(documents.filter((d) => d.id !== docId));
+    toast.success('Документ удалён');
+  };
+
+  const handleEditDocument = (doc: Document) => {
+    if (userRole !== 'admin' && userRole !== 'creator') {
+      toast.error('Недостаточно прав для редактирования');
+      return;
+    }
+    setEditingDoc(doc);
+    setNewDocNumber(doc.number);
+    setCustomerName(doc.customerName);
+    setCustomerLastName(doc.customerLastName);
+    setItemDescription(doc.itemDescription);
+    setPickupDate(doc.pickupDate);
+    setRecipientPhone(doc.recipientPhone);
+    setRecipientEmail(doc.recipientEmail || '');
+    setDepositAmount(doc.depositAmount.toString());
+    setPickupAmount(doc.pickupAmount.toString());
+    setActiveTab('issue');
   };
 
   const handlePickupDocument = (docNumber: string) => {
@@ -178,26 +268,32 @@ const Index = () => {
             </div>
             <CardTitle className="text-3xl text-center">Система учёта документов</CardTitle>
             <CardDescription className="text-center text-base">
-              Вход для кассиров и администраторов
+              Вход для сотрудников и клиентов
             </CardDescription>
+            <div className="text-xs text-center text-muted-foreground space-y-1 pt-2">
+              <p>Кассир: пароль <strong>25</strong></p>
+              <p>Админ: пароль <strong>2025</strong></p>
+              <p>Создатель: пароль <strong>202505</strong></p>
+              <p>Клиент: имя или номер телефона (без пароля)</p>
+            </div>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="cashier">Имя кассира</Label>
+              <Label htmlFor="cashier">Имя или номер телефона</Label>
               <Input
                 id="cashier"
-                placeholder="Введите ваше имя"
+                placeholder="Введите ваше имя или телефон"
                 value={cashierName}
                 onChange={(e) => setCashierName(e.target.value)}
                 className="h-12"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Пароль</Label>
+              <Label htmlFor="password">Пароль (для клиентов — оставьте пустым)</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Введите пароль"
+                placeholder="Введите пароль или оставьте пустым"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
@@ -214,6 +310,109 @@ const Index = () => {
     );
   }
 
+  if (userRole === 'customer') {
+    const customerDocs = documents.filter(
+      (d) =>
+        d.recipientPhone === currentCashier ||
+        (d.customerName.toLowerCase() + ' ' + d.customerLastName.toLowerCase()).includes(
+          currentCashier.toLowerCase()
+        )
+    );
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+        <div className="border-b bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-50">
+          <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 gradient-primary rounded-xl flex items-center justify-center shadow-md">
+                <Icon name="ShoppingBag" size={24} className="text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Мои вещи
+                </h1>
+                <p className="text-sm text-muted-foreground">🛍️ Клиент: {currentCashier}</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsLoggedIn(false);
+                setCashierName('');
+                setPassword('');
+                toast.success('Вы вышли из системы');
+              }}
+              className="gap-2"
+            >
+              <Icon name="LogOut" size={18} />
+              Выйти
+            </Button>
+          </div>
+        </div>
+
+        <div className="container mx-auto px-4 py-8">
+          <Card className="shadow-lg border-0">
+            <CardHeader>
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <Icon name="Package" size={28} className="text-primary" />
+                Ваши вещи на хранении
+              </CardTitle>
+              <CardDescription>Всего предметов: {customerDocs.length}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {customerDocs.length === 0 ? (
+                <div className="text-center py-12">
+                  <Icon name="PackageOpen" size={64} className="mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-lg text-muted-foreground">У вас нет вещей на хранении</p>
+                </div>
+              ) : (
+                <ScrollArea className="h-[600px] pr-4">
+                  <div className="space-y-4">
+                    {customerDocs.map((doc) => (
+                      <Card key={doc.id} className="p-5 border-2 hover:shadow-lg transition-shadow">
+                        <div className="flex gap-4">
+                          <img src={doc.qrCode} alt="QR Code" className="w-32 h-32 rounded-lg shadow-md" />
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-bold text-2xl text-primary">{doc.number}</p>
+                                <p className="text-lg font-medium text-foreground">{doc.itemDescription}</p>
+                              </div>
+                              {doc.status === 'issued' ? (
+                                <Badge className="gradient-primary text-white text-base px-3 py-1">На хранении</Badge>
+                              ) : (
+                                <Badge variant="outline" className="border-green-500 text-green-700 text-base px-3 py-1">
+                                  Получено
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div className="flex items-center gap-2">
+                                <Icon name="Calendar" size={18} className="text-purple-600" />
+                                <span>Дата забора: {new Date(doc.pickupDate).toLocaleDateString('ru-RU')}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Icon name="DollarSign" size={18} className="text-blue-600" />
+                                <span>К оплате при получении: {doc.pickupAmount}₽</span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Сдано: {doc.issuedAt.toLocaleString('ru-RU')}
+                            </p>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       <div className="border-b bg-white/80 backdrop-blur-lg shadow-sm sticky top-0 z-50">
@@ -224,9 +423,14 @@ const Index = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                DocuStore
+                {settings.storeName}
               </h1>
-              <p className="text-sm text-muted-foreground">Кассир: {currentCashier}</p>
+              <p className="text-sm text-muted-foreground">
+                {userRole === 'creator' && '👑 Создатель'}
+                {userRole === 'admin' && '🛡️ Администратор'}
+                {userRole === 'cashier' && '👤 Кассир'}
+                : {currentCashier}
+              </p>
             </div>
           </div>
           <Button
@@ -235,6 +439,7 @@ const Index = () => {
               setIsLoggedIn(false);
               setCashierName('');
               setPassword('');
+              setUserRole('cashier');
               toast.success('Вы вышли из системы');
             }}
             className="gap-2"
@@ -247,19 +452,31 @@ const Index = () => {
 
       <div className="container mx-auto px-4 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 h-14 bg-white shadow-md">
-            <TabsTrigger value="issue" className="gap-2 text-base data-[state=active]:gradient-primary data-[state=active]:text-white">
-              <Icon name="FilePlus" size={20} />
-              Выдача
-            </TabsTrigger>
-            <TabsTrigger value="pickup" className="gap-2 text-base data-[state=active]:gradient-primary data-[state=active]:text-white">
-              <Icon name="ScanLine" size={20} />
-              Получение
-            </TabsTrigger>
-            <TabsTrigger value="archive" className="gap-2 text-base data-[state=active]:gradient-primary data-[state=active]:text-white">
-              <Icon name="Archive" size={20} />
-              Архив
-            </TabsTrigger>
+          <TabsList className={`grid w-full h-14 bg-white shadow-md ${userRole === 'cashier' ? 'grid-cols-2' : (userRole === 'creator' ? 'grid-cols-4' : 'grid-cols-3')}`}>
+            {(userRole === 'admin' || userRole === 'creator' || userRole === 'cashier') && (
+              <TabsTrigger value="issue" className="gap-2 text-base data-[state=active]:gradient-primary data-[state=active]:text-white">
+                <Icon name="FilePlus" size={20} />
+                Выдача
+              </TabsTrigger>
+            )}
+            {(userRole === 'admin' || userRole === 'creator' || userRole === 'cashier') && (
+              <TabsTrigger value="pickup" className="gap-2 text-base data-[state=active]:gradient-primary data-[state=active]:text-white">
+                <Icon name="ScanLine" size={20} />
+                Получение
+              </TabsTrigger>
+            )}
+            {(userRole === 'admin' || userRole === 'creator') && (
+              <TabsTrigger value="archive" className="gap-2 text-base data-[state=active]:gradient-primary data-[state=active]:text-white">
+                <Icon name="Archive" size={20} />
+                Архив
+              </TabsTrigger>
+            )}
+            {userRole === 'creator' && (
+              <TabsTrigger value="settings" className="gap-2 text-base data-[state=active]:gradient-primary data-[state=active]:text-white">
+                <Icon name="Settings" size={20} />
+                Управление
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="issue" className="space-y-6">
@@ -384,9 +601,35 @@ const Index = () => {
                     />
                   </div>
                 </div>
+                {editingDoc && (
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border-2 border-blue-200">
+                    <Icon name="Info" size={20} className="text-blue-600" />
+                    <p className="text-sm text-blue-700 flex-1">
+                      Режим редактирования документа <strong>{editingDoc.number}</strong>
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setEditingDoc(null);
+                        setNewDocNumber('');
+                        setCustomerName('');
+                        setCustomerLastName('');
+                        setItemDescription('');
+                        setPickupDate('');
+                        setRecipientPhone('');
+                        setRecipientEmail('');
+                        setDepositAmount('');
+                        setPickupAmount('');
+                      }}
+                    >
+                      <Icon name="X" size={16} />
+                    </Button>
+                  </div>
+                )}
                 <Button onClick={handleIssueDocument} className="w-full h-14 text-lg gradient-primary shadow-lg hover:opacity-90">
                   <Icon name="QrCode" size={24} className="mr-2" />
-                  Выдать документ и создать QR-код
+                  {editingDoc ? 'Сохранить изменения' : 'Выдать документ и создать QR-код'}
                 </Button>
               </CardContent>
             </Card>
@@ -440,6 +683,28 @@ const Index = () => {
                                 <p className="text-xs text-muted-foreground">
                                   Выдал: {doc.issuedBy} • {doc.issuedAt.toLocaleString('ru-RU')}
                                 </p>
+                                {(userRole === 'admin' || userRole === 'creator') && (
+                                  <div className="flex gap-2 pt-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleEditDocument(doc)}
+                                      className="gap-1"
+                                    >
+                                      <Icon name="Edit" size={14} />
+                                      Редактировать
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleDeleteDocument(doc.id)}
+                                      className="gap-1"
+                                    >
+                                      <Icon name="Trash2" size={14} />
+                                      Удалить
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </Card>
@@ -558,6 +823,28 @@ const Index = () => {
                                   </p>
                                 )}
                               </div>
+                              {(userRole === 'admin' || userRole === 'creator') && (
+                                <div className="flex gap-2 pt-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleEditDocument(doc)}
+                                    className="gap-1"
+                                  >
+                                    <Icon name="Edit" size={14} />
+                                    Редактировать
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => handleDeleteDocument(doc.id)}
+                                    className="gap-1"
+                                  >
+                                    <Icon name="Trash2" size={14} />
+                                    Удалить
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </Card>
@@ -568,6 +855,109 @@ const Index = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {userRole === 'creator' && (
+            <TabsContent value="settings" className="space-y-6">
+              <Card className="shadow-lg border-0">
+                <CardHeader>
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Icon name="Crown" size={28} className="text-primary" />
+                    Управление системой
+                  </CardTitle>
+                  <CardDescription>Настройки доступны только создателю</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="p-5 bg-purple-50 rounded-lg space-y-4 border-2 border-purple-200">
+                    <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                      <Icon name="Store" size={20} />
+                      Настройки магазина
+                    </h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="storeName">Название системы</Label>
+                      <Input
+                        id="storeName"
+                        value={settings.storeName}
+                        onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
+                        className="h-12"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="depositFee">Комиссия при сдаче (₽)</Label>
+                        <Input
+                          id="depositFee"
+                          type="number"
+                          value={settings.depositFee}
+                          onChange={(e) => setSettings({ ...settings, depositFee: parseFloat(e.target.value) })}
+                          className="h-12"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pickupFee">Комиссия при получении (₽)</Label>
+                        <Input
+                          id="pickupFee"
+                          type="number"
+                          value={settings.pickupFee}
+                          onChange={(e) => setSettings({ ...settings, pickupFee: parseFloat(e.target.value) })}
+                          className="h-12"
+                        />
+                      </div>
+                    </div>
+                    <Button className="gradient-primary">
+                      <Icon name="Save" size={20} className="mr-2" />
+                      Сохранить настройки
+                    </Button>
+                  </div>
+
+                  <div className="p-5 bg-blue-50 rounded-lg space-y-4 border-2 border-blue-200">
+                    <h3 className="font-semibold text-lg flex items-center gap-2 text-blue-700">
+                      <Icon name="Shield" size={20} />
+                      Уровни доступа
+                    </h3>
+                    <div className="space-y-3 text-sm">
+                      <div className="p-3 bg-white rounded border">
+                        <p className="font-semibold text-purple-600">👑 Создатель (пароль: 202505)</p>
+                        <p className="text-muted-foreground">Полный доступ ко всем функциям и настройкам</p>
+                      </div>
+                      <div className="p-3 bg-white rounded border">
+                        <p className="font-semibold text-blue-600">🛡️ Администратор (пароль: 2025)</p>
+                        <p className="text-muted-foreground">Выдача, получение, архив, редактирование, удаление</p>
+                      </div>
+                      <div className="p-3 bg-white rounded border">
+                        <p className="font-semibold text-green-600">👤 Кассир (пароль: 25)</p>
+                        <p className="text-muted-foreground">Только выдача и получение документов</p>
+                      </div>
+                      <div className="p-3 bg-white rounded border">
+                        <p className="font-semibold text-orange-600">🛍️ Клиент (без пароля)</p>
+                        <p className="text-muted-foreground">Просмотр своих вещей и QR-кодов</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-5 bg-green-50 rounded-lg space-y-4 border-2 border-green-200">
+                    <h3 className="font-semibold text-lg flex items-center gap-2 text-green-700">
+                      <Icon name="BarChart3" size={20} />
+                      Статистика
+                    </h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="p-4 bg-white rounded-lg text-center">
+                        <p className="text-3xl font-bold text-purple-600">{documents.filter((d) => d.status === 'issued').length}</p>
+                        <p className="text-sm text-muted-foreground">Активных</p>
+                      </div>
+                      <div className="p-4 bg-white rounded-lg text-center">
+                        <p className="text-3xl font-bold text-green-600">{documents.filter((d) => d.status === 'picked_up').length}</p>
+                        <p className="text-sm text-muted-foreground">Получено</p>
+                      </div>
+                      <div className="p-4 bg-white rounded-lg text-center">
+                        <p className="text-3xl font-bold text-blue-600">{documents.length}</p>
+                        <p className="text-sm text-muted-foreground">Всего</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

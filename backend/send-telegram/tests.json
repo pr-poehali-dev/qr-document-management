@@ -1,0 +1,47 @@
+{
+  "tests": [
+    {
+      "name": "Send ready notification",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "phone": "123456789",
+        "message": "Ваша вещь готова к получению",
+        "messageType": "ready"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Send lost notification",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "phone": "123456789",
+        "message": "К сожалению, ваша вещь утеряна",
+        "messageType": "lost"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Missing phone number",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "message": "Test message"
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "Phone number is required"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

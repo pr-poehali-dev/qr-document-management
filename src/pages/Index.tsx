@@ -72,6 +72,49 @@ const Index = () => {
   const [newRequestPhone, setNewRequestPhone] = useState('');
   const [newRequestItem, setNewRequestItem] = useState('');
   const [newRequestDate, setNewRequestDate] = useState('');
+  const [sendingNotification, setSendingNotification] = useState<string | null>(null);
+
+  const TELEGRAM_API_URL = 'https://functions.poehali.dev/4f7c832f-71e4-495b-af19-2c8479781024';
+
+  const sendTelegramNotification = async (doc: Document, messageType: 'ready' | 'lost' | 'reminder') => {
+    setSendingNotification(doc.id);
+    
+    const messages = {
+      ready: `Ваша вещь "${doc.itemDescription}" готова к получению!\n\nНомер: ${doc.number}\nК оплате: ${doc.pickupAmount}₽`,
+      lost: `К сожалению, ваша вещь "${doc.itemDescription}" была утеряна.\n\nНомер: ${doc.number}\nСвяжитесь с нами для решения вопроса.`,
+      reminder: `Напоминаем, что ваша вещь "${doc.itemDescription}" ожидает получения.\n\nНомер: ${doc.number}\nДата забора: ${new Date(doc.pickupDate).toLocaleDateString('ru-RU')}\nК оплате: ${doc.pickupAmount}₽`
+    };
+    
+    try {
+      const response = await fetch(TELEGRAM_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: doc.recipientPhone,
+          message: messages[messageType],
+          messageType: messageType
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        toast.success(`Уведомление отправлено клиенту ${doc.customerName} ${doc.customerLastName}`);
+      } else {
+        toast.error(result.error || 'Не удалось отправить уведомление');
+        if (result.hint) {
+          toast.info(result.hint);
+        }
+      }
+    } catch (error) {
+      toast.error('Ошибка при отправке уведомления');
+      console.error(error);
+    } finally {
+      setSendingNotification(null);
+    }
+  };
 
   const handleLogin = () => {
     if (!cashierName.trim()) {
@@ -835,25 +878,59 @@ const Index = () => {
                                   Выдал: {doc.issuedBy} • {doc.issuedAt.toLocaleString('ru-RU')}
                                 </p>
                                 {(userRole === 'admin' || userRole === 'creator') && (
-                                  <div className="flex gap-2 pt-2">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => handleEditDocument(doc)}
-                                      className="gap-1"
-                                    >
-                                      <Icon name="Edit" size={14} />
-                                      Редактировать
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      onClick={() => handleDeleteDocument(doc.id)}
-                                      className="gap-1"
-                                    >
-                                      <Icon name="Trash2" size={14} />
-                                      Удалить
-                                    </Button>
+                                  <div className="space-y-2 pt-2">
+                                    <div className="flex gap-2">
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleEditDocument(doc)}
+                                        className="gap-1"
+                                      >
+                                        <Icon name="Edit" size={14} />
+                                        Редактировать
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={() => handleDeleteDocument(doc.id)}
+                                        className="gap-1"
+                                      >
+                                        <Icon name="Trash2" size={14} />
+                                        Удалить
+                                      </Button>
+                                    </div>
+                                    <div className="flex gap-2 flex-wrap">
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        onClick={() => sendTelegramNotification(doc, 'ready')}
+                                        disabled={sendingNotification === doc.id}
+                                        className="gap-1 bg-green-600 hover:bg-green-700 text-xs"
+                                      >
+                                        <Icon name="MessageCircle" size={12} />
+                                        {sendingNotification === doc.id ? 'Отправка...' : 'Готово'}
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        onClick={() => sendTelegramNotification(doc, 'lost')}
+                                        disabled={sendingNotification === doc.id}
+                                        className="gap-1 bg-red-600 hover:bg-red-700 text-xs"
+                                      >
+                                        <Icon name="AlertTriangle" size={12} />
+                                        Утеряно
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        onClick={() => sendTelegramNotification(doc, 'reminder')}
+                                        disabled={sendingNotification === doc.id}
+                                        className="gap-1 bg-blue-600 hover:bg-blue-700 text-xs"
+                                      >
+                                        <Icon name="Bell" size={12} />
+                                        Напомнить
+                                      </Button>
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -975,25 +1052,59 @@ const Index = () => {
                                 )}
                               </div>
                               {(userRole === 'admin' || userRole === 'creator') && (
-                                <div className="flex gap-2 pt-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleEditDocument(doc)}
-                                    className="gap-1"
-                                  >
-                                    <Icon name="Edit" size={14} />
-                                    Редактировать
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => handleDeleteDocument(doc.id)}
-                                    className="gap-1"
-                                  >
-                                    <Icon name="Trash2" size={14} />
-                                    Удалить
-                                  </Button>
+                                <div className="space-y-2 pt-2">
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleEditDocument(doc)}
+                                      className="gap-1"
+                                    >
+                                      <Icon name="Edit" size={14} />
+                                      Редактировать
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => handleDeleteDocument(doc.id)}
+                                      className="gap-1"
+                                    >
+                                      <Icon name="Trash2" size={14} />
+                                      Удалить
+                                    </Button>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => sendTelegramNotification(doc, 'ready')}
+                                      disabled={sendingNotification === doc.id}
+                                      className="gap-1 bg-green-600 hover:bg-green-700"
+                                    >
+                                      <Icon name="MessageCircle" size={14} />
+                                      {sendingNotification === doc.id ? 'Отправка...' : 'Готово к получению'}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => sendTelegramNotification(doc, 'lost')}
+                                      disabled={sendingNotification === doc.id}
+                                      className="gap-1 bg-red-600 hover:bg-red-700"
+                                    >
+                                      <Icon name="AlertTriangle" size={14} />
+                                      Утеряно
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => sendTelegramNotification(doc, 'reminder')}
+                                      disabled={sendingNotification === doc.id}
+                                      className="gap-1 bg-blue-600 hover:bg-blue-700"
+                                    >
+                                      <Icon name="Bell" size={14} />
+                                      Напомнить
+                                    </Button>
+                                  </div>
                                 </div>
                               )}
                             </div>

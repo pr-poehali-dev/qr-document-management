@@ -14,6 +14,11 @@ interface Document {
   id: string;
   number: string;
   customerName: string;
+  customerLastName: string;
+  itemDescription: string;
+  pickupDate: string;
+  recipientPhone: string;
+  recipientEmail?: string;
   depositAmount: number;
   pickupAmount: number;
   issuedBy: string;
@@ -34,6 +39,11 @@ const Index = () => {
 
   const [newDocNumber, setNewDocNumber] = useState('');
   const [customerName, setCustomerName] = useState('');
+  const [customerLastName, setCustomerLastName] = useState('');
+  const [itemDescription, setItemDescription] = useState('');
+  const [pickupDate, setPickupDate] = useState('');
+  const [recipientPhone, setRecipientPhone] = useState('');
+  const [recipientEmail, setRecipientEmail] = useState('');
   const [depositAmount, setDepositAmount] = useState('');
   const [pickupAmount, setPickupAmount] = useState('');
 
@@ -74,6 +84,22 @@ const Index = () => {
       toast.error('Введите имя клиента');
       return;
     }
+    if (!customerLastName.trim()) {
+      toast.error('Введите фамилию клиента');
+      return;
+    }
+    if (!itemDescription.trim()) {
+      toast.error('Введите описание вещи');
+      return;
+    }
+    if (!pickupDate) {
+      toast.error('Укажите когда заберут вещь');
+      return;
+    }
+    if (!recipientPhone.trim()) {
+      toast.error('Введите номер телефона получателя');
+      return;
+    }
     if (!depositAmount || parseFloat(depositAmount) < 0) {
       toast.error('Введите сумму при сдаче');
       return;
@@ -90,6 +116,11 @@ const Index = () => {
       id: `${Date.now()}`,
       number: docNumber,
       customerName: customerName.trim(),
+      customerLastName: customerLastName.trim(),
+      itemDescription: itemDescription.trim(),
+      pickupDate: pickupDate,
+      recipientPhone: recipientPhone.trim(),
+      recipientEmail: recipientEmail.trim(),
       depositAmount: parseFloat(depositAmount),
       pickupAmount: parseFloat(pickupAmount),
       issuedBy: currentCashier,
@@ -99,10 +130,15 @@ const Index = () => {
     };
 
     setDocuments([newDoc, ...documents]);
-    toast.success(`Документ ${docNumber} выдан клиенту ${customerName}`);
+    toast.success(`Документ ${docNumber} выдан клиенту ${customerName} ${customerLastName}`);
 
     setNewDocNumber('');
     setCustomerName('');
+    setCustomerLastName('');
+    setItemDescription('');
+    setPickupDate('');
+    setRecipientPhone('');
+    setRecipientEmail('');
     setDepositAmount('');
     setPickupAmount('');
   };
@@ -246,19 +282,87 @@ const Index = () => {
                     className="h-12"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="customer">Имя клиента</Label>
-                  <Input
-                    id="customer"
-                    placeholder="Введите имя клиента"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="h-12"
-                  />
+                
+                <div className="p-5 bg-purple-50 rounded-lg space-y-4 border-2 border-purple-200">
+                  <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                    <Icon name="FileText" size={20} />
+                    Анкета клиента
+                  </h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="customer">Имя *</Label>
+                      <Input
+                        id="customer"
+                        placeholder="Введите имя"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        className="h-12"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="customerLastName">Фамилия *</Label>
+                      <Input
+                        id="customerLastName"
+                        placeholder="Введите фамилию"
+                        value={customerLastName}
+                        onChange={(e) => setCustomerLastName(e.target.value)}
+                        className="h-12"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="itemDescription">Что за вещь *</Label>
+                    <Input
+                      id="itemDescription"
+                      placeholder="Например: Синяя куртка, Паспорт, Сумка"
+                      value={itemDescription}
+                      onChange={(e) => setItemDescription(e.target.value)}
+                      className="h-12"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="pickupDate">Когда заберут *</Label>
+                    <Input
+                      id="pickupDate"
+                      type="date"
+                      value={pickupDate}
+                      onChange={(e) => setPickupDate(e.target.value)}
+                      className="h-12"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="recipientPhone">Телефон получателя *</Label>
+                      <Input
+                        id="recipientPhone"
+                        type="tel"
+                        placeholder="+7 (___) ___-__-__"
+                        value={recipientPhone}
+                        onChange={(e) => setRecipientPhone(e.target.value)}
+                        className="h-12"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="recipientEmail">Email получателя</Label>
+                      <Input
+                        id="recipientEmail"
+                        type="email"
+                        placeholder="email@example.com"
+                        value={recipientEmail}
+                        onChange={(e) => setRecipientEmail(e.target.value)}
+                        className="h-12"
+                      />
+                    </div>
+                  </div>
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="depositAmount">Сумма при сдаче (₽)</Label>
+                    <Label htmlFor="depositAmount">Сумма при сдаче (₽) *</Label>
                     <Input
                       id="depositAmount"
                       type="number"
@@ -269,7 +373,7 @@ const Index = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="pickupAmount">Сумма при получении (₽)</Label>
+                    <Label htmlFor="pickupAmount">Сумма при получении (₽) *</Label>
                     <Input
                       id="pickupAmount"
                       type="number"
@@ -308,11 +412,22 @@ const Index = () => {
                                 <div className="flex items-start justify-between">
                                   <div>
                                     <p className="font-bold text-xl text-primary">{doc.number}</p>
-                                    <p className="text-sm text-muted-foreground">Клиент: {doc.customerName}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      Клиент: {doc.customerName} {doc.customerLastName}
+                                    </p>
+                                    <p className="text-sm font-medium text-foreground">Вещь: {doc.itemDescription}</p>
                                   </div>
                                   <Badge className="gradient-primary text-white">Активен</Badge>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 text-sm">
+                                  <div className="flex items-center gap-1">
+                                    <Icon name="Calendar" size={16} className="text-purple-600" />
+                                    <span>Дата забора: {new Date(doc.pickupDate).toLocaleDateString('ru-RU')}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Icon name="Phone" size={16} className="text-blue-600" />
+                                    <span>{doc.recipientPhone}</span>
+                                  </div>
                                   <div className="flex items-center gap-1">
                                     <Icon name="DollarSign" size={16} className="text-green-600" />
                                     <span>При сдаче: {doc.depositAmount}₽</span>
@@ -398,7 +513,10 @@ const Index = () => {
                               <div className="flex items-start justify-between">
                                 <div>
                                   <p className="font-bold text-xl text-primary">{doc.number}</p>
-                                  <p className="text-sm text-muted-foreground">Клиент: {doc.customerName}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Клиент: {doc.customerName} {doc.customerLastName}
+                                  </p>
+                                  <p className="text-sm font-medium text-foreground">Вещь: {doc.itemDescription}</p>
                                 </div>
                                 {doc.status === 'issued' ? (
                                   <Badge className="gradient-primary text-white">Активен</Badge>
@@ -409,6 +527,20 @@ const Index = () => {
                                 )}
                               </div>
                               <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div className="flex items-center gap-1">
+                                  <Icon name="Calendar" size={16} className="text-purple-600" />
+                                  <span>Дата забора: {new Date(doc.pickupDate).toLocaleDateString('ru-RU')}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Icon name="Phone" size={16} className="text-blue-600" />
+                                  <span>{doc.recipientPhone}</span>
+                                </div>
+                                {doc.recipientEmail && (
+                                  <div className="flex items-center gap-1 col-span-2">
+                                    <Icon name="Mail" size={16} className="text-purple-600" />
+                                    <span>{doc.recipientEmail}</span>
+                                  </div>
+                                )}
                                 <div className="flex items-center gap-1">
                                   <Icon name="DollarSign" size={16} className="text-green-600" />
                                   <span>При сдаче: {doc.depositAmount}₽</span>

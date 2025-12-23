@@ -65,6 +65,13 @@ const Index = () => {
   const [pickupAmount, setPickupAmount] = useState('');
 
   const [scanQrNumber, setScanQrNumber] = useState('');
+  const [customerActiveTab, setCustomerActiveTab] = useState('items');
+
+  const [newRequestName, setNewRequestName] = useState('');
+  const [newRequestLastName, setNewRequestLastName] = useState('');
+  const [newRequestPhone, setNewRequestPhone] = useState('');
+  const [newRequestItem, setNewRequestItem] = useState('');
+  const [newRequestDate, setNewRequestDate] = useState('');
 
   const handleLogin = () => {
     if (!cashierName.trim()) {
@@ -355,63 +362,203 @@ const Index = () => {
         </div>
 
         <div className="container mx-auto px-4 py-8">
-          <Card className="shadow-lg border-0">
-            <CardHeader>
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Icon name="Package" size={28} className="text-primary" />
-                Ваши вещи на хранении
-              </CardTitle>
-              <CardDescription>Всего предметов: {customerDocs.length}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {customerDocs.length === 0 ? (
-                <div className="text-center py-12">
-                  <Icon name="PackageOpen" size={64} className="mx-auto text-muted-foreground/50 mb-4" />
-                  <p className="text-lg text-muted-foreground">У вас нет вещей на хранении</p>
-                </div>
-              ) : (
-                <ScrollArea className="h-[600px] pr-4">
-                  <div className="space-y-4">
-                    {customerDocs.map((doc) => (
-                      <Card key={doc.id} className="p-5 border-2 hover:shadow-lg transition-shadow">
-                        <div className="flex gap-4">
-                          <img src={doc.qrCode} alt="QR Code" className="w-32 h-32 rounded-lg shadow-md" />
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <p className="font-bold text-2xl text-primary">{doc.number}</p>
-                                <p className="text-lg font-medium text-foreground">{doc.itemDescription}</p>
+          <Tabs value={customerActiveTab} onValueChange={setCustomerActiveTab} className="space-y-6">
+            <TabsList className="grid w-full h-14 bg-white shadow-md grid-cols-2">
+              <TabsTrigger value="items" className="gap-2 text-base data-[state=active]:gradient-primary data-[state=active]:text-white">
+                <Icon name="Package" size={20} />
+                Мои вещи
+              </TabsTrigger>
+              <TabsTrigger value="new-request" className="gap-2 text-base data-[state=active]:gradient-primary data-[state=active]:text-white">
+                <Icon name="PlusCircle" size={20} />
+                Новая заявка
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="items">
+              <Card className="shadow-lg border-0">
+                <CardHeader>
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Icon name="Package" size={28} className="text-primary" />
+                    Ваши вещи на хранении
+                  </CardTitle>
+                  <CardDescription>Всего предметов: {customerDocs.length}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {customerDocs.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Icon name="PackageOpen" size={64} className="mx-auto text-muted-foreground/50 mb-4" />
+                      <p className="text-lg text-muted-foreground">У вас нет вещей на хранении</p>
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[600px] pr-4">
+                      <div className="space-y-4">
+                        {customerDocs.map((doc) => (
+                          <Card key={doc.id} className="p-5 border-2 hover:shadow-lg transition-shadow">
+                            <div className="flex gap-4">
+                              <img src={doc.qrCode} alt="QR Code" className="w-32 h-32 rounded-lg shadow-md" />
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <p className="font-bold text-2xl text-primary">{doc.number}</p>
+                                    <p className="text-lg font-medium text-foreground">{doc.itemDescription}</p>
+                                  </div>
+                                  {doc.status === 'issued' ? (
+                                    <Badge className="gradient-primary text-white text-base px-3 py-1">На хранении</Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="border-green-500 text-green-700 text-base px-3 py-1">
+                                      Получено
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <Icon name="Calendar" size={18} className="text-purple-600" />
+                                    <span>Дата забора: {new Date(doc.pickupDate).toLocaleDateString('ru-RU')}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Icon name="DollarSign" size={18} className="text-blue-600" />
+                                    <span>К оплате при получении: {doc.pickupAmount}₽</span>
+                                  </div>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Сдано: {doc.issuedAt.toLocaleString('ru-RU')}
+                                </p>
                               </div>
-                              {doc.status === 'issued' ? (
-                                <Badge className="gradient-primary text-white text-base px-3 py-1">На хранении</Badge>
-                              ) : (
-                                <Badge variant="outline" className="border-green-500 text-green-700 text-base px-3 py-1">
-                                  Получено
-                                </Badge>
-                              )}
                             </div>
-                            <div className="grid grid-cols-2 gap-3 text-sm">
-                              <div className="flex items-center gap-2">
-                                <Icon name="Calendar" size={18} className="text-purple-600" />
-                                <span>Дата забора: {new Date(doc.pickupDate).toLocaleDateString('ru-RU')}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Icon name="DollarSign" size={18} className="text-blue-600" />
-                                <span>К оплате при получении: {doc.pickupAmount}₽</span>
-                              </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Сдано: {doc.issuedAt.toLocaleString('ru-RU')}
-                            </p>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
+                          </Card>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="new-request">
+              <Card className="shadow-lg border-0">
+                <CardHeader>
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Icon name="FileText" size={28} className="text-primary" />
+                    Оформить заявку на хранение
+                  </CardTitle>
+                  <CardDescription>Заполните форму, и кассир примет вашу вещь</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="p-5 bg-purple-50 rounded-lg space-y-4 border-2 border-purple-200">
+                    <h3 className="font-semibold text-lg flex items-center gap-2 text-primary">
+                      <Icon name="User" size={20} />
+                      Ваши данные
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="newRequestName">Ваше имя *</Label>
+                        <Input
+                          id="newRequestName"
+                          placeholder="Введите имя"
+                          value={newRequestName}
+                          onChange={(e) => setNewRequestName(e.target.value)}
+                          className="h-12"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="newRequestLastName">Ваша фамилия *</Label>
+                        <Input
+                          id="newRequestLastName"
+                          placeholder="Введите фамилию"
+                          value={newRequestLastName}
+                          onChange={(e) => setNewRequestLastName(e.target.value)}
+                          className="h-12"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newRequestPhone">Ваш номер телефона *</Label>
+                      <Input
+                        id="newRequestPhone"
+                        type="tel"
+                        placeholder="+7 (___) ___-__-__"
+                        value={newRequestPhone}
+                        onChange={(e) => setNewRequestPhone(e.target.value)}
+                        className="h-12"
+                      />
+                    </div>
                   </div>
-                </ScrollArea>
-              )}
-            </CardContent>
-          </Card>
+
+                  <div className="p-5 bg-blue-50 rounded-lg space-y-4 border-2 border-blue-200">
+                    <h3 className="font-semibold text-lg flex items-center gap-2 text-blue-700">
+                      <Icon name="Package" size={20} />
+                      Информация о вещи
+                    </h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="newRequestItem">Что хотите сдать на хранение *</Label>
+                      <Input
+                        id="newRequestItem"
+                        placeholder="Например: Синяя куртка, Паспорт, Сумка"
+                        value={newRequestItem}
+                        onChange={(e) => setNewRequestItem(e.target.value)}
+                        className="h-12"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newRequestDate">Когда планируете забрать *</Label>
+                      <Input
+                        id="newRequestDate"
+                        type="date"
+                        value={newRequestDate}
+                        onChange={(e) => setNewRequestDate(e.target.value)}
+                        className="h-12"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
+                    <Icon name="Info" size={20} className="text-primary" />
+                    <p>После отправки заявки принесите вещь к кассиру. Стоимость хранения уточните у сотрудника.</p>
+                  </div>
+
+                  <Button
+                    onClick={() => {
+                      if (!newRequestName.trim()) {
+                        toast.error('Введите ваше имя');
+                        return;
+                      }
+                      if (!newRequestLastName.trim()) {
+                        toast.error('Введите вашу фамилию');
+                        return;
+                      }
+                      if (!newRequestPhone.trim()) {
+                        toast.error('Введите ваш номер телефона');
+                        return;
+                      }
+                      if (!newRequestItem.trim()) {
+                        toast.error('Укажите что хотите сдать');
+                        return;
+                      }
+                      if (!newRequestDate) {
+                        toast.error('Укажите дату получения');
+                        return;
+                      }
+
+                      toast.success(
+                        `Заявка принята! Принесите "${newRequestItem}" к кассиру. Назовите имя: ${newRequestName} ${newRequestLastName}`
+                      );
+                      
+                      setNewRequestName('');
+                      setNewRequestLastName('');
+                      setNewRequestPhone('');
+                      setNewRequestItem('');
+                      setNewRequestDate('');
+                      setCustomerActiveTab('items');
+                    }}
+                    className="w-full h-14 text-lg gradient-primary shadow-lg hover:opacity-90"
+                  >
+                    <Icon name="Send" size={24} className="mr-2" />
+                    Отправить заявку
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     );

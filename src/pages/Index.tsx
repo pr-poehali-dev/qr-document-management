@@ -270,12 +270,6 @@ const Index = () => {
             <CardDescription className="text-center text-base">
               Вход для сотрудников и клиентов
             </CardDescription>
-            <div className="text-xs text-center text-muted-foreground space-y-1 pt-2">
-              <p>Кассир: пароль <strong>25</strong></p>
-              <p>Админ: пароль <strong>2025</strong></p>
-              <p>Создатель: пароль <strong>202505</strong></p>
-              <p>Клиент: имя или номер телефона (без пароля)</p>
-            </div>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="space-y-2">

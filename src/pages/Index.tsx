@@ -272,6 +272,16 @@ const Index = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="p-3 bg-purple-100 rounded-lg border-2 border-purple-300">
+                <p className="text-xs font-semibold text-purple-700 mb-1">🛍️ Для клиента:</p>
+                <p className="text-xs text-purple-600">Введи номер телефона и пароль оставь пустым</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-lg border-2 border-blue-300">
+                <p className="text-xs font-semibold text-blue-700 mb-1">👤 Для админа/кассира:</p>
+                <p className="text-xs text-blue-600">Введи имя и пароль</p>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="cashier">Имя или номер телефона</Label>
               <Input
